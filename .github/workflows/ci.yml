@@ -1,0 +1,39 @@
+name: CI
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - { php: '8.2', laravel: '12', stability: prefer-lowest }
+          - { php: '8.3', laravel: '12', stability: prefer-stable }
+          - { php: '8.4', laravel: '13', stability: prefer-stable }
+          - { php: '8.5', laravel: '13', stability: prefer-stable }
+    name: PHP ${{ matrix.php }} / Laravel ${{ matrix.laravel }} (${{ matrix.stability }})
+    steps:
+      - uses: actions/checkout@v4
+      - uses: shivammathur/setup-php@v2
+        with:
+          php-version: ${{ matrix.php }}
+          coverage: none
+      - run: composer require "laravel/framework:^${{ matrix.laravel }}.0" --dev --no-update
+      - run: composer update --${{ matrix.stability }} --no-interaction --no-progress
+      - run: vendor/bin/phpunit
+
+  lint:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.4'
+          coverage: none
+      - run: composer install --no-interaction --no-progress
+      - run: vendor/bin/phpstan analyse --no-progress
+      - run: vendor/bin/pint --test
